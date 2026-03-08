@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# Models
+/model
+/models
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# Data (large binary files — use Git LFS or DVC instead)
+# We are using Git LFS so we can track the data folder, but IGNORING raw unneeded training patches
+# data/
+data/Dataset_UNet_v2/
+data/Dataset_UNet_v2_improved/
+data/Dataset_UNet_v2_improved.zip
+data/data-revolusi-urban/
+data/java-260224-free.shp-001/
+# results/
+results/predictions/
+results/visualisasi/
+
+# Trained model weights (large files — distribute separately)
+# We are using Git LFS so we can track the models folder
+# models/*.pth
+# !models/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Logs
+*.log

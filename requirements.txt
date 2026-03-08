@@ -1,0 +1,47 @@
+# =============================================================================
+# requirements.txt
+# Monitoring Revolusi Ruang Terbuka Hijau – U-Net RTH Dashboard
+# Covers: Streamlit dashboard (app.py + pages/) AND Jupyter Notebook
+# =============================================================================
+
+# ─── Jupyter Notebook ─────────────────────────────────────────────────────────
+jupyter>=1.0.0
+notebook>=7.0.0
+ipykernel>=6.0.0
+
+# ─── Core Numerics ────────────────────────────────────────────────────────────
+numpy>=1.24.0
+pandas>=2.0.0
+
+# ─── Deep Learning ────────────────────────────────────────────────────────────
+# CPU build (default). For GPU, replace with:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+torch>=2.0.0
+torchvision>=0.15.0
+
+# ─── Computer Vision & Augmentation ──────────────────────────────────────────
+albumentations>=1.3.0
+opencv-python-headless>=4.7.0   # required by albumentations (headless = no GUI dep)
+Pillow>=9.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0                  # used in notebook evaluation visualisation
+
+# ─── Geospatial ───────────────────────────────────────────────────────────────
+geopandas>=0.14.0
+rasterio>=1.3.0                  # reading/writing GeoTIFF (Sentinel-2 tiles)
+# Note: rasterio requires GDAL. On Windows, install from wheel:
+#   pip install rasterio --find-links https://girder.github.io/large_image_wheels
+
+# ─── Google Earth Engine (Notebook – data acquisition) ────────────────────────
+earthengine-api>=0.1.370         # import ee
+geemap>=0.30.0                   # optional: interactive EE map in notebook
+
+# ─── Machine Learning Metrics ─────────────────────────────────────────────────
+scikit-learn>=1.3.0
+
+# ─── Progress Bar (Notebook training loop) ────────────────────────────────────
+tqdm>=4.65.0
+
+# ─── Interactive Visualisation (Dashboard) ────────────────────────────────────
+plotly>=5.15.0
+streamlit>=1.35.0
