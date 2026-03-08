@@ -16,8 +16,8 @@ env/
 ENV/
 
 # Models
-/model
-/models
+# /model
+# /models
 
 # Streamlit
 .streamlit/secrets.toml
