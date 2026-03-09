@@ -262,169 +262,172 @@ with tab_matrix:
 # ── Tab 3: Full patch explorer ──────────────────────────────────
 with tab_explorer:
     st.markdown("### 🔬 Explore All Prediction Results")
-    st.markdown(
-        f"There are **{len(raw_outputs):,} test patches** that you can explore below.  "
-        "Use the slider or navigation buttons to select a patch."
-    )
-
     test_imgs_ev  = st.session_state['test_imgs']
     test_masks_ev = st.session_state['test_masks']
     n_patches     = len(raw_outputs)
 
-    # Items per page (grid)
-    per_page = st.select_slider("Patches per page", options=[1, 2, 4, 6, 9, 12], value=6)
-    total_pages = max(1, (n_patches + per_page - 1) // per_page)
+    if n_patches == 0 or not test_imgs_ev or not os.path.exists(test_imgs_ev[0]):
+        st.info("ℹ️ Full Prediction Exploration is disabled because the raw `Dataset_UNet_v2_improved` image patches are not available in this environment.")
+    else:
+        st.markdown(
+            f"There are **{n_patches:,} test patches** that you can explore below.  "
+            "Use the slider or navigation buttons to select a patch."
+        )
 
-    page = st.number_input("Page", min_value=1, max_value=total_pages, value=1, step=1)
-    st.caption(f"Page {page} / {total_pages}  •  Total {n_patches} patches")
+        # Items per page (grid)
+        per_page = st.select_slider("Patches per page", options=[1, 2, 4, 6, 9, 12], value=6)
+        total_pages = max(1, (n_patches + per_page - 1) // per_page)
 
-    start_idx = (page - 1) * per_page
-    end_idx   = min(start_idx + per_page, n_patches)
-    cols_per_row = min(per_page, 3)   # max 3 columns per row
+        page = st.number_input("Page", min_value=1, max_value=total_pages, value=1, step=1)
+        st.caption(f"Page {page} / {total_pages}  •  Total {n_patches} patches")
 
-    patch_indices = list(range(start_idx, end_idx))
-    ncols = cols_per_row
-    nrows = (len(patch_indices) + ncols - 1) // ncols
+        start_idx = (page - 1) * per_page
+        end_idx   = min(start_idx + per_page, n_patches)
+        cols_per_row = min(per_page, 3)   # max 3 columns per row
 
-    fig, axes = plt.subplots(nrows * 2, ncols * 2, figsize=(4 * ncols * 2, 4 * nrows * 2))
-    axes = np.array(axes).reshape(nrows * 2, ncols * 2)
-    fig.patch.set_facecolor('#0e1117')
-    fig.suptitle(f"GOS Segmentation Results – U-Net on Sentinel-2",
-                 color='white', fontsize=15, y=1.01)
+        patch_indices = list(range(start_idx, end_idx))
+        ncols = cols_per_row
+        nrows = (len(patch_indices) + ncols - 1) // ncols
 
-    for pi, idx in enumerate(patch_indices):
-        row_block = (pi // ncols) * 2
-        col_block = (pi %  ncols) * 2
+        fig, axes = plt.subplots(nrows * 2, ncols * 2, figsize=(4 * ncols * 2, 4 * nrows * 2))
+        axes = np.array(axes).reshape(nrows * 2, ncols * 2)
+        fig.patch.set_facecolor('#0e1117')
+        fig.suptitle(f"GOS Segmentation Results – U-Net on Sentinel-2",
+                     color='white', fontsize=15, y=1.01)
 
-        img_arr  = np.load(test_imgs_ev[idx]).astype(np.float32)
-        mask_arr = np.load(test_masks_ev[idx]) if os.path.exists(test_masks_ev[idx]) else None
-        pred_arr = (raw_outputs[idx] > thr).astype(np.uint8)
+        for pi, idx in enumerate(patch_indices):
+            row_block = (pi // ncols) * 2
+            col_block = (pi %  ncols) * 2
 
-        # overlay: TP=green, FP=yellow, FN=red
-        overlay = np.zeros((*pred_arr.shape, 3), dtype=np.float32)
-        if mask_arr is not None:
-            overlay[(mask_arr == 1) & (pred_arr == 1)] = [0, 1, 0]   # TP green
-            overlay[(mask_arr == 0) & (pred_arr == 1)] = [1, 1, 0]   # FP yellow
-            overlay[(mask_arr == 1) & (pred_arr == 0)] = [1, 0, 0]   # FN red
+            img_arr  = np.load(test_imgs_ev[idx]).astype(np.float32)
+            mask_arr = np.load(test_masks_ev[idx]) if os.path.exists(test_masks_ev[idx]) else None
+            pred_arr = (raw_outputs[idx] > thr).astype(np.uint8)
 
-        rgb = img_arr[[0, 1, 2], :, :].transpose(1, 2, 0)
-        rgb = np.clip(rgb / rgb.max(), 0, 1) if rgb.max() > 0 else rgb
+            # overlay: TP=green, FP=yellow, FN=red
+            overlay = np.zeros((*pred_arr.shape, 3), dtype=np.float32)
+            if mask_arr is not None:
+                overlay[(mask_arr == 1) & (pred_arr == 1)] = [0, 1, 0]   # TP green
+                overlay[(mask_arr == 0) & (pred_arr == 1)] = [1, 1, 0]   # FP yellow
+                overlay[(mask_arr == 1) & (pred_arr == 0)] = [1, 0, 0]   # FN red
 
-        # Row 0: RGB + Ground Truth
-        for ax in [axes[row_block, col_block], axes[row_block, col_block + 1]]:
-            ax.set_facecolor('#0e1117')
-        axes[row_block, col_block].imshow(rgb)
-        axes[row_block, col_block].set_title(f"RGB Image", color='white', fontsize=9)
-        axes[row_block, col_block].axis('off')
-        if mask_arr is not None:
-            axes[row_block, col_block + 1].imshow(mask_arr, cmap='Greens', vmin=0, vmax=1)
-        axes[row_block, col_block + 1].set_title("Ground Truth", color='white', fontsize=9)
-        axes[row_block, col_block + 1].axis('off')
+            rgb = img_arr[[0, 1, 2], :, :].transpose(1, 2, 0)
+            rgb = np.clip(rgb / rgb.max(), 0, 1) if rgb.max() > 0 else rgb
 
-        # Row 1: Prediction + Overlay
-        for ax in [axes[row_block + 1, col_block], axes[row_block + 1, col_block + 1]]:
-            ax.set_facecolor('#0e1117')
-        axes[row_block + 1, col_block].imshow(pred_arr, cmap='Greens', vmin=0, vmax=1)
-        axes[row_block + 1, col_block].set_title("U-Net Prediction", color='white', fontsize=9)
-        axes[row_block + 1, col_block].axis('off')
-        axes[row_block + 1, col_block + 1].imshow(overlay)
-        axes[row_block + 1, col_block + 1].set_title("Overlay", color='white', fontsize=9)
-        axes[row_block + 1, col_block + 1].axis('off')
+            # Row 0: RGB + Ground Truth
+            for ax in [axes[row_block, col_block], axes[row_block, col_block + 1]]:
+                ax.set_facecolor('#0e1117')
+            axes[row_block, col_block].imshow(rgb)
+            axes[row_block, col_block].set_title(f"RGB Image", color='white', fontsize=9)
+            axes[row_block, col_block].axis('off')
+            if mask_arr is not None:
+                axes[row_block, col_block + 1].imshow(mask_arr, cmap='Greens', vmin=0, vmax=1)
+            axes[row_block, col_block + 1].set_title("Ground Truth", color='white', fontsize=9)
+            axes[row_block, col_block + 1].axis('off')
 
-    # Hide unused axes
-    for pi2 in range(len(patch_indices), nrows * ncols):
-        r = (pi2 // ncols) * 2; c = (pi2 % ncols) * 2
-        for dr in range(2):
-            for dc in range(2):
-                if r + dr < axes.shape[0] and c + dc < axes.shape[1]:
-                    axes[r + dr, c + dc].set_visible(False)
+            # Row 1: Prediction + Overlay
+            for ax in [axes[row_block + 1, col_block], axes[row_block + 1, col_block + 1]]:
+                ax.set_facecolor('#0e1117')
+            axes[row_block + 1, col_block].imshow(pred_arr, cmap='Greens', vmin=0, vmax=1)
+            axes[row_block + 1, col_block].set_title("U-Net Prediction", color='white', fontsize=9)
+            axes[row_block + 1, col_block].axis('off')
+            axes[row_block + 1, col_block + 1].imshow(overlay)
+            axes[row_block + 1, col_block + 1].set_title("Overlay", color='white', fontsize=9)
+            axes[row_block + 1, col_block + 1].axis('off')
 
-    plt.tight_layout()
-    st.pyplot(fig, use_container_width=True)
+        # Hide unused axes
+        for pi2 in range(len(patch_indices), nrows * ncols):
+            r = (pi2 // ncols) * 2; c = (pi2 % ncols) * 2
+            for dr in range(2):
+                for dc in range(2):
+                    if r + dr < axes.shape[0] and c + dc < axes.shape[1]:
+                        axes[r + dr, c + dc].set_visible(False)
 
-    # ── Save Predictions High Res ──────────────────────────────────────────
-    results_dir = os.path.join(PROJECT_ROOT, "results")
-    predictions_path = os.path.join(results_dir, "sample_predictions.png")
-    fig.savefig(predictions_path, dpi=300, bbox_inches='tight', facecolor=fig.get_facecolor())
-    
-    st.markdown("---")
-    
-    # Enable exporting universally
-    st.markdown("#### 💾 Export All Predictions")
-    st.markdown("This feature will export **all patches (all pages)** into high-resolution `.png` image files into the `results/predictions/` folder.")
-    if st.button("Save All Prediction Images"):
-        export_prog = st.progress(0, text="Preparing image export...")
-        export_dir = os.path.join(results_dir, "predictions")
-        os.makedirs(export_dir, exist_ok=True)
+        plt.tight_layout()
+        st.pyplot(fig, use_container_width=True)
+
+        # ── Save Predictions High Res ──────────────────────────────────────────
+        results_dir = os.path.join(PROJECT_ROOT, "results")
+        predictions_path = os.path.join(results_dir, "sample_predictions.png")
+        fig.savefig(predictions_path, dpi=300, bbox_inches='tight', facecolor=fig.get_facecolor())
         
-        for p in range(1, total_pages + 1):
-            export_prog.progress(p / total_pages, text=f"Saving page {p} of {total_pages}...")
-            s_idx = (p - 1) * per_page
-            e_idx = min(s_idx + per_page, n_patches)
+        st.markdown("---")
+        
+        # Enable exporting universally
+        st.markdown("#### 💾 Export All Predictions")
+        st.markdown("This feature will export **all patches (all pages)** into high-resolution `.png` image files into the `results/predictions/` folder.")
+        if st.button("Save All Prediction Images"):
+            export_prog = st.progress(0, text="Preparing image export...")
+            export_dir = os.path.join(results_dir, "predictions")
+            os.makedirs(export_dir, exist_ok=True)
             
-            p_indices = list(range(s_idx, e_idx))
-            p_nrows = (len(p_indices) + ncols - 1) // ncols
-            
-            fig_ex, axes_ex = plt.subplots(p_nrows * 2, ncols * 2, figsize=(4 * ncols * 2, 4 * p_nrows * 2))
-            axes_ex = np.array(axes_ex).reshape(p_nrows * 2, ncols * 2)
-            fig_ex.patch.set_facecolor('#0e1117')
-            fig_ex.suptitle(f"GOS Segmentation Results – Page {p}", color='white', fontsize=15, y=1.01)
+            for p in range(1, total_pages + 1):
+                export_prog.progress(p / total_pages, text=f"Saving page {p} of {total_pages}...")
+                s_idx = (p - 1) * per_page
+                e_idx = min(s_idx + per_page, n_patches)
+                
+                p_indices = list(range(s_idx, e_idx))
+                p_nrows = (len(p_indices) + ncols - 1) // ncols
+                
+                fig_ex, axes_ex = plt.subplots(p_nrows * 2, ncols * 2, figsize=(4 * ncols * 2, 4 * p_nrows * 2))
+                axes_ex = np.array(axes_ex).reshape(p_nrows * 2, ncols * 2)
+                fig_ex.patch.set_facecolor('#0e1117')
+                fig_ex.suptitle(f"GOS Segmentation Results – Page {p}", color='white', fontsize=15, y=1.01)
 
-            for pi, idx in enumerate(p_indices):
-                row_block = (pi // ncols) * 2
-                col_block = (pi %  ncols) * 2
+                for pi, idx in enumerate(p_indices):
+                    row_block = (pi // ncols) * 2
+                    col_block = (pi %  ncols) * 2
 
-                img_arr  = np.load(test_imgs_ev[idx]).astype(np.float32)
-                mask_arr = np.load(test_masks_ev[idx]) if os.path.exists(test_masks_ev[idx]) else None
-                pred_arr = (raw_outputs[idx] > thr).astype(np.uint8)
+                    img_arr  = np.load(test_imgs_ev[idx]).astype(np.float32)
+                    mask_arr = np.load(test_masks_ev[idx]) if os.path.exists(test_masks_ev[idx]) else None
+                    pred_arr = (raw_outputs[idx] > thr).astype(np.uint8)
 
-                overlay = np.zeros((*pred_arr.shape, 3), dtype=np.float32)
-                if mask_arr is not None:
-                    overlay[(mask_arr == 1) & (pred_arr == 1)] = [0, 1, 0]
-                    overlay[(mask_arr == 0) & (pred_arr == 1)] = [1, 1, 0]
-                    overlay[(mask_arr == 1) & (pred_arr == 0)] = [1, 0, 0]
+                    overlay = np.zeros((*pred_arr.shape, 3), dtype=np.float32)
+                    if mask_arr is not None:
+                        overlay[(mask_arr == 1) & (pred_arr == 1)] = [0, 1, 0]
+                        overlay[(mask_arr == 0) & (pred_arr == 1)] = [1, 1, 0]
+                        overlay[(mask_arr == 1) & (pred_arr == 0)] = [1, 0, 0]
 
-                rgb = img_arr[[0, 1, 2], :, :].transpose(1, 2, 0)
-                rgb = np.clip(rgb / rgb.max(), 0, 1) if rgb.max() > 0 else rgb
+                    rgb = img_arr[[0, 1, 2], :, :].transpose(1, 2, 0)
+                    rgb = np.clip(rgb / rgb.max(), 0, 1) if rgb.max() > 0 else rgb
 
-                for ax in [axes_ex[row_block, col_block], axes_ex[row_block, col_block + 1]]:
-                    ax.set_facecolor('#0e1117')
-                axes_ex[row_block, col_block].imshow(rgb)
-                axes_ex[row_block, col_block].set_title(f"RGB Image", color='white', fontsize=9)
-                axes_ex[row_block, col_block].axis('off')
-                if mask_arr is not None:
-                    axes_ex[row_block, col_block + 1].imshow(mask_arr, cmap='Greens', vmin=0, vmax=1)
-                axes_ex[row_block, col_block + 1].set_title("Ground Truth", color='white', fontsize=9)
-                axes_ex[row_block, col_block + 1].axis('off')
+                    for ax in [axes_ex[row_block, col_block], axes_ex[row_block, col_block + 1]]:
+                        ax.set_facecolor('#0e1117')
+                    axes_ex[row_block, col_block].imshow(rgb)
+                    axes_ex[row_block, col_block].set_title(f"RGB Image", color='white', fontsize=9)
+                    axes_ex[row_block, col_block].axis('off')
+                    if mask_arr is not None:
+                        axes_ex[row_block, col_block + 1].imshow(mask_arr, cmap='Greens', vmin=0, vmax=1)
+                    axes_ex[row_block, col_block + 1].set_title("Ground Truth", color='white', fontsize=9)
+                    axes_ex[row_block, col_block + 1].axis('off')
 
-                for ax in [axes_ex[row_block + 1, col_block], axes_ex[row_block + 1, col_block + 1]]:
-                    ax.set_facecolor('#0e1117')
-                axes_ex[row_block + 1, col_block].imshow(pred_arr, cmap='Greens', vmin=0, vmax=1)
-                axes_ex[row_block + 1, col_block].set_title("U-Net Prediction", color='white', fontsize=9)
-                axes_ex[row_block + 1, col_block].axis('off')
-                axes_ex[row_block + 1, col_block + 1].imshow(overlay)
-                axes_ex[row_block + 1, col_block + 1].set_title("Overlay", color='white', fontsize=9)
-                axes_ex[row_block + 1, col_block + 1].axis('off')
+                    for ax in [axes_ex[row_block + 1, col_block], axes_ex[row_block + 1, col_block + 1]]:
+                        ax.set_facecolor('#0e1117')
+                    axes_ex[row_block + 1, col_block].imshow(pred_arr, cmap='Greens', vmin=0, vmax=1)
+                    axes_ex[row_block + 1, col_block].set_title("U-Net Prediction", color='white', fontsize=9)
+                    axes_ex[row_block + 1, col_block].axis('off')
+                    axes_ex[row_block + 1, col_block + 1].imshow(overlay)
+                    axes_ex[row_block + 1, col_block + 1].set_title("Overlay", color='white', fontsize=9)
+                    axes_ex[row_block + 1, col_block + 1].axis('off')
 
-            for pi2 in range(len(p_indices), p_nrows * ncols):
-                r = (pi2 // ncols) * 2; c = (pi2 % ncols) * 2
-                for dr in range(2):
-                    for dc in range(2):
-                        if r + dr < axes_ex.shape[0] and c + dc < axes_ex.shape[1]:
-                            axes_ex[r + dr, c + dc].set_visible(False)
+                for pi2 in range(len(p_indices), p_nrows * ncols):
+                    r = (pi2 // ncols) * 2; c = (pi2 % ncols) * 2
+                    for dr in range(2):
+                        for dc in range(2):
+                            if r + dr < axes_ex.shape[0] and c + dc < axes_ex.shape[1]:
+                                axes_ex[r + dr, c + dc].set_visible(False)
 
-            fig_ex.tight_layout()
-            out_path = os.path.join(export_dir, f"page_{p:03d}.png")
-            fig_ex.savefig(out_path, dpi=300, bbox_inches='tight', facecolor=fig_ex.get_facecolor())
-            plt.close(fig_ex)
-            
-        export_prog.empty()
-        st.success(f"✅ All prediction images successfully saved to `{export_dir}`")
+                fig_ex.tight_layout()
+                out_path = os.path.join(export_dir, f"page_{p:03d}.png")
+                fig_ex.savefig(out_path, dpi=300, bbox_inches='tight', facecolor=fig_ex.get_facecolor())
+                plt.close(fig_ex)
+                
+            export_prog.empty()
+            st.success(f"✅ All prediction images successfully saved to `{export_dir}`")
 
-    # Legend
-    st.markdown("""
-    **Overlay Legend:**  
-    🟩 **Green** = TP (Correct prediction: GOS)  
-    🟨 **Yellow** = FP (False prediction: Non-GOS predicted as GOS)  
-    🟥 **Red** = FN (False prediction: GOS not detected)
-    """)
+        # Legend
+        st.markdown("""
+        **Overlay Legend:**  
+        🟩 **Green** = TP (Correct prediction: GOS)  
+        🟨 **Yellow** = FP (False prediction: Non-GOS predicted as GOS)  
+        🟥 **Red** = FN (False prediction: GOS not detected)
+        """)
