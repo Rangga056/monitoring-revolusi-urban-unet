@@ -36,7 +36,8 @@ data/data-revolusi-urban/
 data/java-260224-free.shp-001/
 # results/
 results/predictions/
-results/visualisasi/
+# Keep presentation assets tracked for Streamlit Cloud
+# results/visualisasi/
 
 # Trained model weights (large files — distribute separately)
 # We are using Git LFS so we can track the models folder

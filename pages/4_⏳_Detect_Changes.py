@@ -291,18 +291,20 @@ if 'temporal_results' in st.session_state:
     pr_2023  = tr['pr_2023']
     has_results = True
 
-# ── Actions ─────────────────────────────────────────
-if tif_2019_exists and tif_2023_exists and models_exist:
-    st.markdown("### 🚀 Run Temporal Analysis")
-    
-    col_inf, col_pres = st.columns(2)
-    with col_inf:
+st.markdown("### 🚀 Run Temporal Analysis")
+
+col_inf, col_pres = st.columns(2)
+with col_inf:
+    if tif_2019_exists and tif_2023_exists and models_exist:
         run_btn = st.button("🔍 Run Full Change Detection", type="primary", help="Run U-Net inference on the whole satellite image.")
+    else:
+        run_btn = False
+        st.error("Cannot run inference: Missing Sentinel-2 data or U-Net model.")
         
-    pres_btn = False
-    with col_pres:
-        if os.path.exists(CSV_PATH):
-            pres_btn = st.button("⚡ Load Latest Presentation Data (Cached)", type="secondary", help="Instantly load pre-calculated statistics and maps.")
+pres_btn = False
+with col_pres:
+    if os.path.exists(CSV_PATH):
+        pres_btn = st.button("⚡ Load Latest Presentation Data (Cached)", type="secondary", help="Instantly load pre-calculated statistics and maps.")
 
     if pres_btn:
         try:
@@ -355,7 +357,7 @@ if tif_2019_exists and tif_2023_exists and models_exist:
 
 # ── Display Results ──────────────────────────────────────────────
 if not has_results:
-    st.info("No analysis results yet. Run change detection above or ensure data and model are available.")
+    st.info("No analysis results yet. Run change detection above, load cached presentation data, or ensure data and model are available.")
     st.stop()
 
 # ── Key Metrics ──────────────────────────────────────────────────

@@ -51,12 +51,13 @@ else:
 
 # ── Load datasets ───────────────────────────────────────────────
 imgs, masks = get_dataset_paths(DEFAULT_CONFIG['dataset_dir'])
-if not imgs:
-    st.error(f"Dataset not found at `{DEFAULT_CONFIG['dataset_dir']}`.")
-    st.stop()
+has_data = len(imgs) > 0
 
-_, temp_imgs, _, temp_masks = train_test_split(imgs, masks, test_size=0.30, random_state=DEFAULT_CONFIG['seed'])
-_, test_imgs, _, test_masks = train_test_split(temp_imgs, temp_masks, test_size=0.50, random_state=DEFAULT_CONFIG['seed'])
+if has_data:
+    _, temp_imgs, _, temp_masks = train_test_split(imgs, masks, test_size=0.30, random_state=DEFAULT_CONFIG['seed'])
+    _, test_imgs, _, test_masks = train_test_split(temp_imgs, temp_masks, test_size=0.50, random_state=DEFAULT_CONFIG['seed'])
+else:
+    test_imgs, test_masks = [], []
 
 # ── Sidebar params ──────────────────────────────────────────────
 batch_size = st.sidebar.number_input("Batch Size (inference)", 1, 32, 8)
@@ -70,7 +71,11 @@ cache_path = os.path.join(results_dir, "evaluation_cache.npz")
 
 col_inf, col_pres = st.columns(2)
 with col_inf:
-    run_btn = st.button("🔍 Run Evaluation on Test Set", type="primary")
+    if has_data:
+        run_btn = st.button("🔍 Run Evaluation on Test Set", type="primary")
+    else:
+        run_btn = False
+        st.error("Cannot run evaluation: Dataset is missing.")
 
 pres_btn = False
 with col_pres:
@@ -160,7 +165,7 @@ elif run_btn:
 
 # ── Show results if available ────────────────────────────────────
 if 'eval_preds' not in st.session_state:
-    st.info("Click the button above to start evaluation.")
+    st.info("Click the button above to start evaluation or load cached presentation results.")
     st.stop()
 
 all_preds   = st.session_state['eval_preds']

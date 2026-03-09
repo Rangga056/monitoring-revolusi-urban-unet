@@ -84,40 +84,42 @@ and displays the training progress. The U-Net model is configured for **5-channe
     data_dir = DEFAULT_CONFIG['dataset_dir']
     json_path = os.path.join(data_dir, "spatial_folds.json")
     has_split = os.path.exists(json_path)
+    can_train = True
 
     if not os.path.exists(os.path.join(data_dir, "images")) or not os.path.exists(os.path.join(data_dir, "masks")):
         st.error(f"❌ Dataset not found at `{data_dir}`. "
-                 f"Make sure the `images/` and `masks/` folders exist with `.npy` files.")
-        st.stop()
+                 f"Make sure the `images/` and `masks/` folders exist with `.npy` files. Training is disabled.")
+        can_train = False
     else:
         # Count total files by listing one of the directories
         total_files = len(os.listdir(os.path.join(data_dir, "images")))
         st.success(f"✅ Dataset found: **{total_files:,} patches** ready to use.")
 
-    st.markdown("---")
-    st.markdown("### 🗺️ Spatial Cross-Validation Fold Selection")
-
-    # Fold selection for Spatial Cross Validation
-    if has_split:
-        with open(json_path, 'r') as f:
-            folds_data = json.load(f)
-        
-        fold_options = ["-- Auto Train All Folds (4 Models) --"] + [f"Fold {k} - {v}" for k, v in folds_data['fold_desc'].items()]
-        selected_fold_str = st.selectbox(
-            "Select Validation Fold (Spatial Cross-Validation)", 
-            options=fold_options,
-            help="To prevent data leakage, testing should be done on a geographic area completely unseen during training. Selecting 'Auto Train All Folds' will run 4 sequential trainings."
-        )
-        if selected_fold_str.startswith("-- Auto"):
-            val_fold_ids = [0, 1, 2, 3] # Training all 4 spatial folds
+    if can_train:
+        st.markdown("---")
+        st.markdown("### 🗺️ Spatial Cross-Validation Fold Selection")
+    
+        # Fold selection for Spatial Cross Validation
+        if has_split:
+            with open(json_path, 'r') as f:
+                folds_data = json.load(f)
+            
+            fold_options = ["-- Auto Train All Folds (4 Models) --"] + [f"Fold {k} - {v}" for k, v in folds_data['fold_desc'].items()]
+            selected_fold_str = st.selectbox(
+                "Select Validation Fold (Spatial Cross-Validation)", 
+                options=fold_options,
+                help="To prevent data leakage, testing should be done on a geographic area completely unseen during training. Selecting 'Auto Train All Folds' will run 4 sequential trainings."
+            )
+            if selected_fold_str.startswith("-- Auto"):
+                val_fold_ids = [0, 1, 2, 3] # Training all 4 spatial folds
+            else:
+                val_fold_ids = [int(selected_fold_str.split()[1])] # Extracts 0, 1, 2, or 3
         else:
-            val_fold_ids = [int(selected_fold_str.split()[1])] # Extracts 0, 1, 2, or 3
-    else:
-        st.warning("⚠️ No `spatial_folds.json` found! Please run `python prepare_patches_improved.py` to generate spatially stratified datasets before training.")
-        st.stop()
+            st.warning("⚠️ No `spatial_folds.json` found! Please run `python prepare_patches_improved.py` to generate spatially stratified datasets before training.")
+            can_train = False
     
     # --- START TRAINING ---
-    if st.button("🚀 Start Training", type="primary", use_container_width=True):
+    if can_train and st.button("🚀 Start Training", type="primary", use_container_width=True):
         set_seed(DEFAULT_CONFIG['seed'])
 
         # ── Build augmentation pipeline ─────────────────────────
