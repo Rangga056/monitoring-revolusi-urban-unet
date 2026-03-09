@@ -266,7 +266,15 @@ with tab_explorer:
     test_masks_ev = st.session_state['test_masks']
     n_patches     = len(raw_outputs)
 
-    if n_patches == 0 or not test_imgs_ev or not os.path.exists(test_imgs_ev[0]):
+    # Safe path check (caching stores absolute paths from Windows, which fail on Linux)
+    has_explorer_data = False
+    if n_patches > 0 and len(test_imgs_ev) > 0:
+        first_img_target = os.path.basename(str(test_imgs_ev[0]).replace('\\', '/'))
+        first_img_path = os.path.join(DEFAULT_CONFIG['dataset_dir'], 'images', first_img_target)
+        if os.path.exists(first_img_path):
+            has_explorer_data = True
+
+    if not has_explorer_data:
         st.info("ℹ️ Full Prediction Exploration is disabled because the raw `Dataset_UNet_v2_improved` image patches are not available in this environment.")
     else:
         st.markdown(
